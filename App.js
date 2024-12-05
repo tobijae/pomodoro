@@ -1,104 +1,135 @@
 const App = () => {
   const [minutes, setMinutes] = React.useState(25);
   const [seconds, setSeconds] = React.useState(0);
+  const [milliseconds, setMilliseconds] = React.useState(0);
   const [isRunning, setIsRunning] = React.useState(false);
   const [mode, setMode] = React.useState('work');
   const [progress, setProgress] = React.useState(100);
+  const [customBackground, setCustomBackground] = React.useState(null);
 
-  // Calculate progress
+  // Smooth progress calculation
   React.useEffect(() => {
-    const totalSeconds = mode === 'work' ? 25 * 60 : 5 * 60;
-    const currentSeconds = minutes * 60 + seconds;
-    setProgress((currentSeconds / totalSeconds) * 100);
-  }, [minutes, seconds, mode]);
+    const totalMs = (mode === 'work' ? 25 : 5) * 60 * 1000;
+    const currentMs = (minutes * 60 + seconds) * 1000 + milliseconds;
+    setProgress((currentMs / totalMs) * 100);
+  }, [minutes, seconds, milliseconds, mode]);
 
-  // Timer logic
+  // Enhanced timer logic with milliseconds
   React.useEffect(() => {
     let interval = null;
     if (isRunning) {
       interval = setInterval(() => {
-        if (seconds > 0) {
-          setSeconds(seconds - 1);
-        } else if (minutes > 0) {
-          setMinutes(minutes - 1);
-          setSeconds(59);
-        } else {
-          setIsRunning(false);
-          setMode(mode === 'work' ? 'break' : 'work');
-          setMinutes(mode === 'work' ? 5 : 25);
-        }
-      }, 1000);
+        setMilliseconds(prev => {
+          if (prev <= 0) {
+            if (seconds <= 0) {
+              if (minutes <= 0) {
+                setIsRunning(false);
+                setMode(mode === 'work' ? 'break' : 'work');
+                setMinutes(mode === 'work' ? 5 : 25);
+                setSeconds(0);
+                return 999;
+              }
+              setMinutes(prev => prev - 1);
+              setSeconds(59);
+              return 999;
+            }
+            setSeconds(prev => prev - 1);
+            return 999;
+          }
+          return prev - 100;
+        });
+      }, 100); // Update every 100ms for smoother animation
     }
     return () => clearInterval(interval);
   }, [isRunning, minutes, seconds, mode]);
 
+  // Background image handler
+  const handleBackgroundUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setCustomBackground(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center overflow-hidden relative">
-      {/* Background effects */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-cyan-900/20" />
-        
-        {/* Floating particles */}
-        {[...Array(20)].map((_, i) => (
+    <div className="min-h-screen flex items-center justify-center overflow-hidden relative">
+      {/* Custom background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
+        style={{
+          backgroundColor: '#1a1a2e',
+          backgroundImage: customBackground ? `url(${customBackground})` : 'none',
+          backgroundBlendMode: 'overlay',
+        }}
+      >
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1a1a2e]/70 to-[#1a1a2e]" />
+      </div>
+
+      {/* Sand particles effect */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(30)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-cyan-500 rounded-full"
+            className="absolute w-px h-px bg-orange-300/30 rounded-full"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animation: `float ${3 + Math.random() * 2}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 2}s`,
-              opacity: 0.2
+              transform: `scale(${Math.random() * 3})`,
+              animation: `float ${10 + Math.random() * 20}s linear infinite`,
+              opacity: Math.random() * 0.5,
             }}
           />
         ))}
       </div>
 
       {/* Main container */}
-      <div className="relative bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-gray-700">
+      <div className="relative backdrop-blur-sm bg-black/20 rounded-lg p-12 max-w-lg w-full mx-4">
         {/* Timer display */}
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 mb-8 text-center">
-          CYBER TIMER
-        </h1>
-
-        <div className="text-8xl font-bold mb-4 text-center font-mono"
+        <div className="text-8xl font-serif mb-8 text-center tracking-widest"
           style={{
-            color: mode === 'work' ? '#0ff' : '#ff00ff',
-            textShadow: `0 0 20px ${mode === 'work' ? '#0ff' : '#ff00ff'}`
+            color: mode === 'work' ? '#e6b17e' : '#d4a373',
+            textShadow: '0 0 30px rgba(230, 177, 126, 0.3)',
+            fontFamily: 'serif'
           }}>
-          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+          {String(minutes).padStart(2, '0')}
+          <span className="opacity-50">:</span>
+          {String(seconds).padStart(2, '0')}
         </div>
 
-        <div className="text-xl uppercase text-center mb-8 tracking-widest"
+        <div 
+          className="text-xl uppercase text-center mb-12 tracking-[0.3em] font-thin"
           style={{
-            color: mode === 'work' ? '#0ff' : '#ff00ff',
-            textShadow: `0 0 10px ${mode === 'work' ? '#0ff' : '#ff00ff'}`
+            color: mode === 'work' ? '#e6b17e' : '#d4a373',
           }}>
           {mode} MODE
         </div>
 
-        {/* Progress bar */}
-        <div className="w-full h-2 bg-gray-700 rounded-full mb-8 overflow-hidden">
-          <div 
-            className="h-full transition-all duration-300"
-            style={{ 
+        {/* Progress ring */}
+        <div className="relative h-1 mb-12 overflow-hidden rounded-full bg-gray-800/50">
+          <div
+            className="absolute h-full transition-all duration-100 rounded-full"
+            style={{
               width: `${progress}%`,
-              backgroundColor: mode === 'work' ? '#0ff' : '#ff00ff',
-              boxShadow: `0 0 10px ${mode === 'work' ? '#0ff' : '#ff00ff'}`
+              backgroundColor: mode === 'work' ? '#e6b17e' : '#d4a373',
+              boxShadow: `0 0 20px ${mode === 'work' ? '#e6b17e' : '#d4a373'}`,
             }}
           />
         </div>
 
         {/* Controls */}
-        <div className="flex justify-center gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           <button
             onClick={() => setIsRunning(!isRunning)}
-            className={`px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-110 ${
-              isRunning 
-                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' 
-                : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-            }`}
-            style={{ textShadow: '0 0 10px currentColor' }}
+            className="px-8 py-3 rounded border-2 transition-all duration-300 hover:bg-white/5"
+            style={{
+              borderColor: mode === 'work' ? '#e6b17e' : '#d4a373',
+              color: mode === 'work' ? '#e6b17e' : '#d4a373',
+            }}
           >
             {isRunning ? 'PAUSE' : 'START'}
           </button>
@@ -108,8 +139,9 @@ const App = () => {
               setIsRunning(false);
               setMinutes(mode === 'work' ? 25 : 5);
               setSeconds(0);
+              setMilliseconds(0);
             }}
-            className="px-6 py-3 rounded-lg bg-gray-600/20 text-gray-300 hover:bg-gray-600/30 transition-all duration-300 transform hover:scale-110"
+            className="px-8 py-3 rounded border-2 border-gray-600 text-gray-400 transition-all duration-300 hover:bg-white/5"
           >
             RESET
           </button>
@@ -119,13 +151,34 @@ const App = () => {
               setMode(mode === 'work' ? 'break' : 'work');
               setMinutes(mode === 'work' ? 5 : 25);
               setSeconds(0);
+              setMilliseconds(0);
               setIsRunning(false);
             }}
-            className="px-6 py-3 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-all duration-300 transform hover:scale-110"
-            style={{ textShadow: '0 0 10px currentColor' }}
+            className="px-8 py-3 rounded border-2 transition-all duration-300 hover:bg-white/5"
+            style={{
+              borderColor: mode === 'work' ? '#d4a373' : '#e6b17e',
+              color: mode === 'work' ? '#d4a373' : '#e6b17e',
+            }}
           >
             SWITCH
           </button>
+        </div>
+
+        {/* Background upload */}
+        <div className="absolute bottom-4 right-4">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleBackgroundUpload}
+            className="hidden"
+            id="background-upload"
+          />
+          <label
+            htmlFor="background-upload"
+            className="cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors duration-300"
+          >
+            Change Background
+          </label>
         </div>
       </div>
     </div>
