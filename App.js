@@ -1,4 +1,9 @@
 const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, onSwitch }) => {
+  const modeColors = {
+    work: { text: 'text-cyan-400', glow: '#0ff', bg: 'bg-gray-800/50' },
+    break: { text: 'text-purple-400', glow: '#a855f7', bg: 'bg-gray-700/50' }
+  };
+
   const [title, setTitle] = React.useState('CYBER TIMER');
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [isEditingTime, setIsEditingTime] = React.useState(false);
@@ -11,10 +16,11 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
   };
 
   return (
-    <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-8 shadow-lg border border-gray-700 widget">
+    <div className={`${modeColors[mode].bg} backdrop-blur-md rounded-xl p-8 shadow-lg border border-gray-700 widget transition-all duration-300`}>
       <h1 
-        className="text-4xl font-bold text-cyan-400 text-center mb-8 glow cursor-pointer"
+        className={`text-4xl font-bold ${modeColors[mode].text} text-center mb-8 glow cursor-pointer transition-all duration-300`}
         onClick={() => setIsEditingTitle(true)}
+        style={{ textShadow: `0 0 20px ${modeColors[mode].glow}` }}
       >
         {isEditingTitle ? (
           <input
@@ -29,8 +35,9 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
       </h1>
       
       <div 
-        className="text-8xl font-bold text-center mb-4 font-mono text-cyan-400 glow cursor-pointer"
+        className={`text-8xl font-bold text-center mb-4 font-mono ${modeColors[mode].text} glow cursor-pointer transition-all duration-300`}
         onClick={() => !isRunning && setIsEditingTime(true)}
+        style={{ textShadow: `0 0 20px ${modeColors[mode].glow}` }}
       >
         {isEditingTime ? (
           <form onSubmit={handleTimeSubmit}>
@@ -48,7 +55,7 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
         )}
       </div>
 
-      <div className="text-xl text-cyan-400 text-center mb-8 uppercase tracking-widest">
+      <div className={`text-xl ${modeColors[mode].text} text-center mb-8 uppercase tracking-widest transition-all duration-300`}>
         {mode} MODE
       </div>
 
@@ -81,6 +88,7 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
 const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddTask, onToggleTask, onRemoveTask }) => {
   const [title, setTitle] = React.useState('TASKS');
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const calculatedProgress = tasks.length === 0 ? 0 : (tasks.filter(t => t.completed).length / tasks.length) * 100;
 
   return (
     <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-8 shadow-lg border border-gray-700 w-96 widget">
@@ -104,7 +112,7 @@ const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddT
         <div 
           className="h-full bg-cyan-400 rounded-full transition-all duration-300"
           style={{ 
-            width: `${taskProgress}%`,
+            width: `${calculatedProgress}%`,
             boxShadow: '0 0 10px #0ff'
           }}
         />
@@ -127,8 +135,7 @@ const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddT
           </button>
         </div>
       </form>
-
-      <div className="space-y-3">
+<div className="space-y-3">
         {tasks.map(task => (
           <div key={task.id} className="flex items-center gap-3 bg-gray-700/30 rounded p-3">
             <input
@@ -172,7 +179,7 @@ const App = () => {
   // Tasks state management for multiple task widgets
   const [taskWidgets, setTaskWidgets] = React.useState({});
 
-  // Timer logic remains the same
+  // Timer logic
   React.useEffect(() => {
     let interval = null;
     if (isRunning) {
