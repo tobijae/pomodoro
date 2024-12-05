@@ -11,7 +11,8 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
 
   const handleTimeSubmit = (e) => {
     e.preventDefault();
-    onReset(parseInt(customMinutes));
+    const value = Math.max(1, Math.min(99, parseInt(customMinutes) || 25));
+    onReset(value);
     setIsEditingTime(false);
   };
 
@@ -40,14 +41,19 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
         style={{ textShadow: `0 0 20px ${modeColors[mode].glow}` }}
       >
         {isEditingTime ? (
-          <form onSubmit={handleTimeSubmit}>
+          <form onSubmit={handleTimeSubmit} className="flex justify-center items-center">
             <input
               type="number"
               value={customMinutes}
-              onChange={(e) => setCustomMinutes(e.target.value)}
+              onChange={(e) => {
+                const value = Math.max(1, Math.min(99, parseInt(e.target.value) || 0));
+                setCustomMinutes(value);
+              }}
               onBlur={handleTimeSubmit}
               autoFocus
-              className="bg-transparent border-b border-cyan-400 outline-none w-32 text-center"
+              min="1"
+              max="99"
+              className="bg-gray-700/30 border border-cyan-400 rounded w-32 text-center text-6xl px-4 py-2"
             />
           </form>
         ) : (
@@ -76,7 +82,8 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
         </button>
         <button
           onClick={onSwitch}
-          className="px-6 py-2 rounded bg-blue-500/20 text-blue-400"
+          className={`px-6 py-2 rounded bg-${mode === 'work' ? 'purple' : 'cyan'}-500/20 
+            text-${mode === 'work' ? 'purple' : 'cyan'}-400`}
         >
           SWITCH
         </button>
@@ -85,10 +92,16 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
   );
 };
 
-const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddTask, onToggleTask, onRemoveTask }) => {
+const TasksWidget = ({ id, tasks, newTask, onNewTaskChange, onAddTask, onToggleTask, onRemoveTask }) => {
   const [title, setTitle] = React.useState('TASKS');
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
-  const calculatedProgress = tasks.length === 0 ? 0 : (tasks.filter(t => t.completed).length / tasks.length) * 100;
+  
+  // Calculate progress internally
+  const progress = React.useMemo(() => {
+    if (!tasks.length) return 0;
+    const completedTasks = tasks.filter(t => t.completed).length;
+    return (completedTasks / tasks.length) * 100;
+  }, [tasks]);
 
   return (
     <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-8 shadow-lg border border-gray-700 w-96 widget">
@@ -112,13 +125,12 @@ const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddT
         <div 
           className="h-full bg-cyan-400 rounded-full transition-all duration-300"
           style={{ 
-            width: `${calculatedProgress}%`,
+            width: `${progress}%`,
             boxShadow: '0 0 10px #0ff'
           }}
         />
       </div>
-
-      <form onSubmit={onAddTask} className="mb-6">
+<form onSubmit={onAddTask} className="mb-6">
         <div className="flex gap-2">
           <input
             type="text"
@@ -135,7 +147,8 @@ const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddT
           </button>
         </div>
       </form>
-<div className="space-y-3">
+
+      <div className="space-y-3">
         {tasks.map(task => (
           <div key={task.id} className="flex items-center gap-3 bg-gray-700/30 rounded p-3">
             <input
@@ -165,21 +178,18 @@ const TasksWidget = ({ id, tasks, taskProgress, newTask, onNewTaskChange, onAddT
 };
 
 const App = () => {
-  // Widget management with unique IDs
   const [widgets, setWidgets] = React.useState([{ type: 'timer', id: 'timer-1' }]);
   const [showWidgetMenu, setShowWidgetMenu] = React.useState(false);
   const [menuPosition, setMenuPosition] = React.useState({ x: 0, y: 0 });
 
-  // Timer state
   const [minutes, setMinutes] = React.useState(25);
   const [seconds, setSeconds] = React.useState(0);
   const [isRunning, setIsRunning] = React.useState(false);
   const [mode, setMode] = React.useState('work');
 
-  // Tasks state management for multiple task widgets
+  // Updated task state management
   const [taskWidgets, setTaskWidgets] = React.useState({});
 
-  // Timer logic
   React.useEffect(() => {
     let interval = null;
     if (isRunning) {
@@ -212,14 +222,13 @@ const App = () => {
     const newId = `${type}-${Date.now()}`;
     setWidgets([...widgets, { type, id: newId }]);
     if (type === 'tasks') {
-      setTaskWidgets({
-        ...taskWidgets,
+      setTaskWidgets(prev => ({
+        ...prev,
         [newId]: {
           tasks: [],
-          newTask: '',
-          taskProgress: 0
+          newTask: ''
         }
-      });
+      }));
     }
     setShowWidgetMenu(false);
   };
@@ -227,9 +236,11 @@ const App = () => {
   const removeWidget = (widgetId) => {
     setWidgets(widgets.filter(w => w.id !== widgetId));
     if (widgetId.startsWith('tasks-')) {
-      const newTaskWidgets = { ...taskWidgets };
-      delete newTaskWidgets[widgetId];
-      setTaskWidgets(newTaskWidgets);
+      setTaskWidgets(prev => {
+        const newState = { ...prev };
+        delete newState[widgetId];
+        return newState;
+      });
     }
   };
 
@@ -237,19 +248,14 @@ const App = () => {
     e.preventDefault();
     const widget = taskWidgets[widgetId];
     if (widget.newTask.trim()) {
-      const newTasks = [
-        ...widget.tasks,
-        { id: Date.now(), text: widget.newTask, completed: false }
-      ];
-      setTaskWidgets({
-        ...taskWidgets,
+      setTaskWidgets(prev => ({
+        ...prev,
         [widgetId]: {
           ...widget,
-          tasks: newTasks,
-          newTask: '',
-          taskProgress: (newTasks.filter(t => t.completed).length / newTasks.length) * 100
+          tasks: [...widget.tasks, { id: Date.now(), text: widget.newTask, completed: false }],
+          newTask: ''
         }
-      });
+      }));
     }
   };
 
@@ -274,7 +280,6 @@ const App = () => {
         />
       ))}
 
-      {/* Widgets Container */}
       <div className="flex flex-wrap gap-8 p-8 items-start">
         {widgets.map(widget => (
           <div key={widget.id} className="relative">
@@ -313,40 +318,39 @@ const App = () => {
               <TasksWidget
                 id={widget.id}
                 tasks={taskWidgets[widget.id].tasks}
-                taskProgress={taskWidgets[widget.id].taskProgress}
                 newTask={taskWidgets[widget.id].newTask}
-                onNewTaskChange={(e) => setTaskWidgets({
-                  ...taskWidgets,
+                onNewTaskChange={(e) => setTaskWidgets(prev => ({
+                  ...prev,
                   [widget.id]: {
-                    ...taskWidgets[widget.id],
+                    ...prev[widget.id],
                     newTask: e.target.value
                   }
-                })}
+                }))}
                 onAddTask={handleAddTask(widget.id)}
                 onToggleTask={(taskId) => {
-                  const widget = taskWidgets[widget.id];
-                  const newTasks = widget.tasks.map(task =>
-                    task.id === taskId ? { ...task, completed: !task.completed } : task
-                  );
-                  setTaskWidgets({
-                    ...taskWidgets,
-                    [widget.id]: {
-                      ...widget,
-                      tasks: newTasks,
-                      taskProgress: (newTasks.filter(t => t.completed).length / newTasks.length) * 100
-                    }
+                  setTaskWidgets(prev => {
+                    const widget = prev[widget.id];
+                    return {
+                      ...prev,
+                      [widget.id]: {
+                        ...widget,
+                        tasks: widget.tasks.map(task =>
+                          task.id === taskId ? { ...task, completed: !task.completed } : task
+                        )
+                      }
+                    };
                   });
                 }}
                 onRemoveTask={(taskId) => {
-                  const widget = taskWidgets[widget.id];
-                  const newTasks = widget.tasks.filter(task => task.id !== taskId);
-                  setTaskWidgets({
-                    ...taskWidgets,
-                    [widget.id]: {
-                      ...widget,
-                      tasks: newTasks,
-                      taskProgress: newTasks.length ? (newTasks.filter(t => t.completed).length / newTasks.length) * 100 : 0
-                    }
+                  setTaskWidgets(prev => {
+                    const widget = prev[widget.id];
+                    return {
+                      ...prev,
+                      [widget.id]: {
+                        ...widget,
+                        tasks: widget.tasks.filter(task => task.id !== taskId)
+                      }
+                    };
                   });
                 }}
               />
@@ -354,7 +358,6 @@ const App = () => {
           </div>
         ))}
 
-        {/* Add Widget Button */}
         <button
           onClick={handleAddWidgetClick}
           className="w-16 h-16 rounded-full bg-cyan-500/20 text-cyan-400 text-3xl flex items-center justify-center hover:bg-cyan-500/30 transition-all duration-300"
@@ -362,7 +365,6 @@ const App = () => {
           +
         </button>
 
-        {/* Widget Menu */}
         {showWidgetMenu && (
           <div 
             className="fixed bg-gray-800/90 backdrop-blur rounded-lg p-4 border border-gray-700 shadow-xl z-50"
