@@ -38,7 +38,7 @@ const App = () => {
           }
           return prev - 100;
         });
-      }, 100); // Update every 100ms for smoother animation
+      }, 20); // Update every 100ms for smoother animation
     }
     return () => clearInterval(interval);
   }, [isRunning, minutes, seconds, mode]);
