@@ -7,13 +7,11 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
   const [title, setTitle] = React.useState('CYBER TIMER');
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [isEditingTime, setIsEditingTime] = React.useState(false);
-  const [customMinutes, setCustomMinutes] = React.useState(minutes);
 
-  const handleTimeSubmit = (e) => {
-    e.preventDefault();
-    const value = Math.max(1, Math.min(99, parseInt(customMinutes) || 25));
-    onReset(value);
-    setIsEditingTime(false);
+  const adjustTime = (amount, e) => {
+    e.stopPropagation();
+    const newMinutes = Math.min(Math.max(1, minutes + amount), 99);
+    onReset(newMinutes);
   };
 
   return (
@@ -36,26 +34,26 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
       </h1>
       
       <div 
-        className={`text-8xl font-bold text-center mb-4 font-mono ${modeColors[mode].text} glow cursor-pointer transition-all duration-300`}
-        onClick={() => !isRunning && setIsEditingTime(true)}
+        className={`text-8xl font-bold text-center mb-4 font-mono ${modeColors[mode].text} glow transition-all duration-300`}
+        onClick={() => !isRunning && setIsEditingTime(!isEditingTime)}
         style={{ textShadow: `0 0 20px ${modeColors[mode].glow}` }}
       >
         {isEditingTime ? (
-          <form onSubmit={handleTimeSubmit} className="flex justify-center items-center">
-            <input
-              type="number"
-              value={customMinutes}
-              onChange={(e) => {
-                const value = Math.max(1, Math.min(99, parseInt(e.target.value) || 0));
-                setCustomMinutes(value);
-              }}
-              onBlur={handleTimeSubmit}
-              autoFocus
-              min="1"
-              max="99"
-              className="bg-gray-700/30 border border-cyan-400 rounded w-32 text-center text-6xl px-4 py-2"
-            />
-          </form>
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={(e) => adjustTime(-1, e)}
+              className={`${modeColors[mode].text} text-4xl hover:opacity-80 px-4 py-2 rounded bg-gray-700/30`}
+            >
+              -
+            </button>
+            <span>{String(minutes).padStart(2, '0')}:00</span>
+            <button
+              onClick={(e) => adjustTime(1, e)}
+              className={`${modeColors[mode].text} text-4xl hover:opacity-80 px-4 py-2 rounded bg-gray-700/30`}
+            >
+              +
+            </button>
+          </div>
         ) : (
           `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
         )}
@@ -82,8 +80,7 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
         </button>
         <button
           onClick={onSwitch}
-          className={`px-6 py-2 rounded bg-${mode === 'work' ? 'purple' : 'cyan'}-500/20 
-            text-${mode === 'work' ? 'purple' : 'cyan'}-400`}
+          className={`px-6 py-2 rounded bg-${mode === 'work' ? 'purple' : 'cyan'}-500/20 text-${mode === 'work' ? 'purple' : 'cyan'}-400`}
         >
           SWITCH
         </button>
@@ -92,11 +89,148 @@ const TimerWidget = ({ id, minutes, seconds, mode, isRunning, onStart, onReset, 
   );
 };
 
+const HabitsWidget = ({ id }) => {
+  const [title, setTitle] = React.useState('HABITS');
+  const [isEditingTitle, setIsEditingTitle] = React.useState(false);
+  const [habits, setHabits] = React.useState([]);
+  const [newHabit, setNewHabit] = React.useState('');
+
+  const days = React.useMemo(() => {
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      result.push({
+        date: date.toISOString().split('T')[0],
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' })
+      });
+    }
+    return result;
+  }, []);
+
+  const toggleHabitDay = (habitId, date) => {
+    setHabits(prevHabits => prevHabits.map(habit => {
+      if (habit.id === habitId) {
+        const newDates = new Set(habit.completedDates);
+        if (newDates.has(date)) {
+          newDates.delete(date);
+        } else {
+          newDates.add(date);
+        }
+        return { ...habit, completedDates: Array.from(newDates) };
+      }
+      return habit;
+    }));
+  };
+
+  const addHabit = (e) => {
+    e.preventDefault();
+    if (newHabit.trim()) {
+      setHabits(prev => [...prev, {
+        id: Date.now(),
+        name: newHabit,
+        completedDates: []
+      }]);
+      setNewHabit('');
+    }
+  };
+
+  return (
+    <div className="bg-gray-800/50 backdrop-blur-md rounded-xl p-8 shadow-lg border border-gray-700 w-96">
+      <h2 
+        className="text-2xl font-bold text-cyan-400 mb-4 glow cursor-pointer"
+        onClick={() => setIsEditingTitle(true)}
+      >
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => setIsEditingTitle(false)}
+            autoFocus
+            className="bg-transparent border-b border-cyan-400 outline-none w-full"
+          />
+        ) : title}
+      </h2>
+
+      <form onSubmit={addHabit} className="mb-6">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newHabit}
+            onChange={(e) => setNewHabit(e.target.value)}
+            placeholder="Add a new habit..."
+            className="flex-1 bg-gray-700/50 border border-gray-600 rounded px-4 py-2 text-cyan-400 placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+          />
+          <button 
+            type="submit"
+            className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded hover:bg-cyan-500/30"
+          >
+            ADD
+          </button>
+        </div>
+      </form>
+
+      <div className="grid grid-cols-8 gap-1 mb-4">
+        <div className="text-gray-500 text-xs"></div>
+        {days.map(({ dayName }) => (
+          <div key={dayName} className="text-gray-500 text-xs text-center">
+            {dayName}
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {habits.map(habit => (
+          <div key={habit.id} className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-cyan-400">{habit.name}</span>
+              <button
+                onClick={() => setHabits(prev => prev.filter(h => h.id !== habit.id))}
+                className="text-gray-500 hover:text-red-400"
+              >
+                ×
+              </button>
+            </div>
+            <div className="grid grid-cols-8 gap-1">
+              <div className="text-gray-500 text-xs flex items-center">{habit.completedDates.length}</div>
+              {days.map(({ date }) => (
+                <button
+                  key={date}
+                  onClick={() => toggleHabitDay(habit.id, date)}
+                  className={`w-8 h-8 rounded ${
+                    habit.completedDates.includes(date)
+                      ? 'bg-cyan-500/50 border-cyan-400'
+                      : 'bg-gray-700/30 border-gray-600'
+                  } border hover:border-cyan-400 transition-colors`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+// Firebase configuration
+const firebaseConfig = {
+  // You'll need to replace these with your Firebase config values
+  apiKey: "your-api-key",
+  authDomain: "your-auth-domain",
+  projectId: "your-project-id",
+  storageBucket: "your-storage-bucket",
+  messagingSenderId: "your-messaging-sender-id",
+  appId: "your-app-id"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
 const TasksWidget = ({ id, tasks, newTask, onNewTaskChange, onAddTask, onToggleTask, onRemoveTask }) => {
   const [title, setTitle] = React.useState('TASKS');
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   
-  // Calculate progress internally
   const progress = React.useMemo(() => {
     if (!tasks.length) return 0;
     const completedTasks = tasks.filter(t => t.completed).length;
@@ -130,7 +264,8 @@ const TasksWidget = ({ id, tasks, newTask, onNewTaskChange, onAddTask, onToggleT
           }}
         />
       </div>
-<form onSubmit={onAddTask} className="mb-6">
+
+      <form onSubmit={onAddTask} className="mb-6">
         <div className="flex gap-2">
           <input
             type="text"
@@ -176,20 +311,33 @@ const TasksWidget = ({ id, tasks, newTask, onNewTaskChange, onAddTask, onToggleT
     </div>
   );
 };
-
 const App = () => {
+  // Auth state
+  const [user, setUser] = React.useState(null);
+  
+  // Widget management
   const [widgets, setWidgets] = React.useState([{ type: 'timer', id: 'timer-1' }]);
   const [showWidgetMenu, setShowWidgetMenu] = React.useState(false);
   const [menuPosition, setMenuPosition] = React.useState({ x: 0, y: 0 });
 
+  // Timer state
   const [minutes, setMinutes] = React.useState(25);
   const [seconds, setSeconds] = React.useState(0);
   const [isRunning, setIsRunning] = React.useState(false);
   const [mode, setMode] = React.useState('work');
 
-  // Updated task state management
+  // Tasks state
   const [taskWidgets, setTaskWidgets] = React.useState({});
 
+  // Auth listener
+  React.useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Timer logic
   React.useEffect(() => {
     let interval = null;
     if (isRunning) {
@@ -244,21 +392,6 @@ const App = () => {
     }
   };
 
-  const handleAddTask = (widgetId) => (e) => {
-    e.preventDefault();
-    const widget = taskWidgets[widgetId];
-    if (widget.newTask.trim()) {
-      setTaskWidgets(prev => ({
-        ...prev,
-        [widgetId]: {
-          ...widget,
-          tasks: [...widget.tasks, { id: Date.now(), text: widget.newTask, completed: false }],
-          newTask: ''
-        }
-      }));
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center relative overflow-hidden">
       {/* Particles */}
@@ -280,6 +413,7 @@ const App = () => {
         />
       ))}
 
+      {/* Widgets Container */}
       <div className="flex flex-wrap gap-8 p-8 items-start">
         {widgets.map(widget => (
           <div key={widget.id} className="relative">
@@ -326,38 +460,53 @@ const App = () => {
                     newTask: e.target.value
                   }
                 }))}
-                onAddTask={handleAddTask(widget.id)}
-                onToggleTask={(taskId) => {
-                  setTaskWidgets(prev => {
-                    const widget = prev[widget.id];
-                    return {
+                onAddTask={(e) => {
+                  e.preventDefault();
+                  const widget = taskWidgets[widget.id];
+                  if (widget.newTask.trim()) {
+                    setTaskWidgets(prev => ({
                       ...prev,
                       [widget.id]: {
-                        ...widget,
-                        tasks: widget.tasks.map(task =>
-                          task.id === taskId ? { ...task, completed: !task.completed } : task
-                        )
+                        ...prev[widget.id],
+                        tasks: [
+                          ...prev[widget.id].tasks,
+                          { id: Date.now(), text: widget.newTask, completed: false }
+                        ],
+                        newTask: ''
                       }
-                    };
-                  });
+                    }));
+                  }
+                }}
+                onToggleTask={(taskId) => {
+                  setTaskWidgets(prev => ({
+                    ...prev,
+                    [widget.id]: {
+                      ...prev[widget.id],
+                      tasks: prev[widget.id].tasks.map(task =>
+                        task.id === taskId ? { ...task, completed: !task.completed } : task
+                      )
+                    }
+                  }));
                 }}
                 onRemoveTask={(taskId) => {
-                  setTaskWidgets(prev => {
-                    const widget = prev[widget.id];
-                    return {
-                      ...prev,
-                      [widget.id]: {
-                        ...widget,
-                        tasks: widget.tasks.filter(task => task.id !== taskId)
-                      }
-                    };
-                  });
+                  setTaskWidgets(prev => ({
+                    ...prev,
+                    [widget.id]: {
+                      ...prev[widget.id],
+                      tasks: prev[widget.id].tasks.filter(task => task.id !== taskId)
+                    }
+                  }));
                 }}
               />
+            )}
+
+            {widget.type === 'habits' && (
+              <HabitsWidget id={widget.id} />
             )}
           </div>
         ))}
 
+        {/* Add Widget Button */}
         <button
           onClick={handleAddWidgetClick}
           className="w-16 h-16 rounded-full bg-cyan-500/20 text-cyan-400 text-3xl flex items-center justify-center hover:bg-cyan-500/30 transition-all duration-300"
@@ -365,6 +514,7 @@ const App = () => {
           +
         </button>
 
+        {/* Widget Menu */}
         {showWidgetMenu && (
           <div 
             className="fixed bg-gray-800/90 backdrop-blur rounded-lg p-4 border border-gray-700 shadow-xl z-50"
@@ -380,6 +530,12 @@ const App = () => {
               className="block w-full px-4 py-2 text-cyan-400 hover:bg-cyan-500/20 rounded text-left"
             >
               Add Tasks Widget
+            </button>
+            <button
+              onClick={() => addWidget('habits')}
+              className="block w-full px-4 py-2 text-cyan-400 hover:bg-cyan-500/20 rounded text-left"
+            >
+              Add Habits Widget
             </button>
           </div>
         )}
