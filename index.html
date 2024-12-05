@@ -8,17 +8,6 @@
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'cyber': '#0ff',
-            }
-          }
-        }
-      }
-    </script>
     <style>
       body {
         margin: 0;
@@ -26,11 +15,27 @@
         min-height: 100vh;
         background: #1a1a2e;
       }
-      .backdrop-blur {
-        backdrop-filter: blur(8px);
+      
+      @keyframes float {
+        0% { transform: translateY(100vh); }
+        100% { transform: translateY(-100px); }
       }
-      input[type="checkbox"] {
-        accent-color: #0ff;
+      
+      .particle {
+        position: absolute;
+        pointer-events: none;
+      }
+      
+      .glow {
+        text-shadow: 0 0 20px currentColor;
+      }
+      
+      .widget {
+        transition: all 0.3s ease;
+      }
+      
+      .widget:hover {
+        transform: translateY(-2px);
       }
     </style>
   </head>
