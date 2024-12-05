@@ -1,184 +1,166 @@
 const App = () => {
   const [minutes, setMinutes] = React.useState(25);
   const [seconds, setSeconds] = React.useState(0);
-  const [milliseconds, setMilliseconds] = React.useState(0);
   const [isRunning, setIsRunning] = React.useState(false);
   const [mode, setMode] = React.useState('work');
-  const [progress, setProgress] = React.useState(100);
-  const [customBackground, setCustomBackground] = React.useState(null);
+  const [tasks, setTasks] = React.useState([]);
+  const [newTask, setNewTask] = React.useState('');
+  const [taskProgress, setTaskProgress] = React.useState(0);
 
-  // Smooth progress calculation
-  React.useEffect(() => {
-    const totalMs = (mode === 'work' ? 25 : 5) * 60 * 1000;
-    const currentMs = (minutes * 60 + seconds) * 1000 + milliseconds;
-    setProgress((currentMs / totalMs) * 100);
-  }, [minutes, seconds, milliseconds, mode]);
-
-  // Enhanced timer logic with milliseconds
+  // Timer logic
   React.useEffect(() => {
     let interval = null;
     if (isRunning) {
       interval = setInterval(() => {
-        setMilliseconds(prev => {
-          if (prev <= 0) {
-            if (seconds <= 0) {
-              if (minutes <= 0) {
-                setIsRunning(false);
-                setMode(mode === 'work' ? 'break' : 'work');
-                setMinutes(mode === 'work' ? 5 : 25);
-                setSeconds(0);
-                return 999;
-              }
-              setMinutes(prev => prev - 1);
-              setSeconds(59);
-              return 999;
-            }
-            setSeconds(prev => prev - 1);
-            return 999;
-          }
-          return prev - 100;
-        });
-      }, 20); // Update every 100ms for smoother animation
+        if (seconds > 0) {
+          setSeconds(seconds - 1);
+        } else if (minutes > 0) {
+          setMinutes(minutes - 1);
+          setSeconds(59);
+        } else {
+          setIsRunning(false);
+          setMode(mode === 'work' ? 'break' : 'work');
+          setMinutes(mode === 'work' ? 5 : 25);
+        }
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRunning, minutes, seconds, mode]);
 
-  // Background image handler
-  const handleBackgroundUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCustomBackground(e.target.result);
-      };
-      reader.readAsDataURL(file);
+  // Calculate task progress
+  React.useEffect(() => {
+    if (tasks.length === 0) {
+      setTaskProgress(0);
+    } else {
+      const completed = tasks.filter(task => task.completed).length;
+      setTaskProgress((completed / tasks.length) * 100);
+    }
+  }, [tasks]);
+
+  const addTask = (e) => {
+    e.preventDefault();
+    if (newTask.trim()) {
+      setTasks([...tasks, { id: Date.now(), text: newTask, completed: false }]);
+      setNewTask('');
     }
   };
 
+  const toggleTask = (taskId) => {
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
+  };
+
+  const removeTask = (taskId) => {
+    setTasks(tasks.filter(task => task.id !== taskId));
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center overflow-hidden relative">
-      {/* Custom background */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000"
-        style={{
-          backgroundColor: '#1a1a2e',
-          backgroundImage: customBackground ? `url(${customBackground})` : 'none',
-          backgroundBlendMode: 'overlay',
-        }}
-      >
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1a1a2e]/70 to-[#1a1a2e]" />
-      </div>
-
-      {/* Sand particles effect */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-px h-px bg-orange-300/30 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              transform: `scale(${Math.random() * 3})`,
-              animation: `float ${10 + Math.random() * 20}s linear infinite`,
-              opacity: Math.random() * 0.5,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Main container */}
-      <div className="relative backdrop-blur-sm bg-black/20 rounded-lg p-12 max-w-lg w-full mx-4">
-        {/* Timer display */}
-        <div className="text-8xl font-serif mb-8 text-center tracking-widest"
-          style={{
-            color: mode === 'work' ? '#e6b17e' : '#d4a373',
-            textShadow: '0 0 30px rgba(230, 177, 126, 0.3)',
-            fontFamily: 'serif'
-          }}>
-          {String(minutes).padStart(2, '0')}
-          <span className="opacity-50">:</span>
-          {String(seconds).padStart(2, '0')}
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center gap-8 p-8">
+      {/* Timer Section */}
+      <div className="bg-gray-800/50 backdrop-blur rounded-xl p-8 shadow-lg border border-gray-700">
+        <h1 className="text-4xl font-bold text-cyan-400 text-center mb-8">CYBER TIMER</h1>
+        
+        <div className="text-8xl font-bold text-center mb-4 font-mono text-cyan-400" 
+          style={{ textShadow: '0 0 20px #0ff' }}>
+          {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </div>
 
-        <div 
-          className="text-xl uppercase text-center mb-12 tracking-[0.3em] font-thin"
-          style={{
-            color: mode === 'work' ? '#e6b17e' : '#d4a373',
-          }}>
-          {mode} MODE
-        </div>
+        <div className="text-xl text-cyan-400 text-center mb-8">{mode.toUpperCase()} MODE</div>
 
-        {/* Progress ring */}
-        <div className="relative h-1 mb-12 overflow-hidden rounded-full bg-gray-800/50">
-          <div
-            className="absolute h-full transition-all duration-100 rounded-full"
-            style={{
-              width: `${progress}%`,
-              backgroundColor: mode === 'work' ? '#e6b17e' : '#d4a373',
-              boxShadow: `0 0 20px ${mode === 'work' ? '#e6b17e' : '#d4a373'}`,
-            }}
-          />
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="flex justify-center gap-4">
           <button
             onClick={() => setIsRunning(!isRunning)}
-            className="px-8 py-3 rounded border-2 transition-all duration-300 hover:bg-white/5"
-            style={{
-              borderColor: mode === 'work' ? '#e6b17e' : '#d4a373',
-              color: mode === 'work' ? '#e6b17e' : '#d4a373',
-            }}
+            className={`px-6 py-2 rounded ${
+              isRunning ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+            }`}
           >
             {isRunning ? 'PAUSE' : 'START'}
           </button>
-
           <button
             onClick={() => {
               setIsRunning(false);
               setMinutes(mode === 'work' ? 25 : 5);
               setSeconds(0);
-              setMilliseconds(0);
             }}
-            className="px-8 py-3 rounded border-2 border-gray-600 text-gray-400 transition-all duration-300 hover:bg-white/5"
+            className="px-6 py-2 rounded bg-gray-700/50 text-gray-300"
           >
             RESET
           </button>
-
           <button
             onClick={() => {
               setMode(mode === 'work' ? 'break' : 'work');
               setMinutes(mode === 'work' ? 5 : 25);
               setSeconds(0);
-              setMilliseconds(0);
               setIsRunning(false);
             }}
-            className="px-8 py-3 rounded border-2 transition-all duration-300 hover:bg-white/5"
-            style={{
-              borderColor: mode === 'work' ? '#d4a373' : '#e6b17e',
-              color: mode === 'work' ? '#d4a373' : '#e6b17e',
-            }}
+            className="px-6 py-2 rounded bg-blue-500/20 text-blue-400"
           >
             SWITCH
           </button>
         </div>
+      </div>
 
-        {/* Background upload */}
-        <div className="absolute bottom-4 right-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleBackgroundUpload}
-            className="hidden"
-            id="background-upload"
+      {/* Tasks Section */}
+      <div className="bg-gray-800/50 backdrop-blur rounded-xl p-8 shadow-lg border border-gray-700 w-96">
+        <h2 className="text-2xl font-bold text-cyan-400 mb-4">TASKS</h2>
+        
+        {/* Progress Bar */}
+        <div className="w-full h-2 bg-gray-700 rounded-full mb-6">
+          <div 
+            className="h-full bg-cyan-400 rounded-full transition-all duration-300"
+            style={{ 
+              width: `${taskProgress}%`,
+              boxShadow: '0 0 10px #0ff'
+            }}
           />
-          <label
-            htmlFor="background-upload"
-            className="cursor-pointer text-sm text-gray-400 hover:text-gray-300 transition-colors duration-300"
-          >
-            Change Background
-          </label>
+        </div>
+
+        {/* Add Task Form */}
+        <form onSubmit={addTask} className="mb-6">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              placeholder="Add a new task..."
+              className="flex-1 bg-gray-700/50 border border-gray-600 rounded px-4 py-2 text-cyan-400 placeholder-gray-500 focus:outline-none focus:border-cyan-400"
+            />
+            <button 
+              type="submit"
+              className="px-4 py-2 bg-cyan-500/20 text-cyan-400 rounded hover:bg-cyan-500/30"
+            >
+              ADD
+            </button>
+          </div>
+        </form>
+
+        {/* Task List */}
+        <div className="space-y-3">
+          {tasks.map(task => (
+            <div key={task.id} className="flex items-center gap-3 bg-gray-700/30 rounded p-3">
+              <input
+                type="checkbox"
+                checked={task.completed}
+                onChange={() => toggleTask(task.id)}
+                className="w-4 h-4 rounded border-gray-600 text-cyan-400 focus:ring-cyan-400"
+              />
+              <span className={`flex-1 ${task.completed ? 'line-through text-gray-500' : 'text-cyan-400'}`}>
+                {task.text}
+              </span>
+              <button
+                onClick={() => removeTask(task.id)}
+                className="text-gray-500 hover:text-red-400"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Task Stats */}
+        <div className="mt-4 text-sm text-gray-500">
+          Completed: {tasks.filter(t => t.completed).length} / {tasks.length}
         </div>
       </div>
     </div>
