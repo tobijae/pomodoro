@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Cyber Pomodoro Timer</title>
+    <title>Dune Pomodoro Timer</title>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -12,16 +12,19 @@
       body {
         margin: 0;
         padding: 0;
-        height: 100vh;
-        background: #0f172a;
+        min-height: 100vh;
+        background: #1a1a2e;
+        color: #e6b17e;
       }
       @keyframes float {
-        0% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
-        100% { transform: translateY(0px); }
-      }
-      .animate-float {
-        animation: float 3s ease-in-out infinite;
+        from {
+          transform: translateY(100vh) rotate(0deg);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(-100px) rotate(360deg);
+          opacity: 0.5;
+        }
       }
     </style>
   </head>
